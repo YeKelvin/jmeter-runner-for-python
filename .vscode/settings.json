@@ -1,0 +1,30 @@
+{
+    /* vscode */
+    "files.insertFinalNewline": true,
+
+    /* Python Lint */
+    "python.linting.flake8Enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.lintOnSave": true,
+    "python.formatting.provider": "yapf",
+
+    "python.languageServer": "Pylance",
+
+    /* Code Runner */
+    "code-runner.executorMap": {
+        "python": "$pythonPath -u $fullFileName",
+    },
+    "code-runner.saveFileBeforeRun": true,
+    "code-runner.runInTerminal": true,
+
+    /* 将项目路径添加到python path中 */
+    "terminal.integrated.env.windows": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+    "terminal.integrated.env.osx": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+    "terminal.integrated.env.linux": {
+        "PYTHONPATH": "${workspaceFolder}"
+    },
+}
