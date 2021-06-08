@@ -53,22 +53,46 @@ class JMeter:
         """根据路径执行JMeter脚本"""
         print(f'开始执行脚本:[ {os.path.split(scriptpath)[1]} ]')
         command = self.jmeter_start + self.options + f'"{scriptpath}"'
-        print(f'Commond:[ {command} ]\n')
+        print(f'执行命令:[ {command} ]\n')
 
         popen = Popen(command, stdout=PIPE, stderr=STDOUT, shell=True, universal_newlines=True, encoding='utf-8')
         while popen.poll() is None:  # 检查子进程是否结束
             line = popen.stdout.readline()
             line = line.strip()
             if line:
+                # 过滤没啥用的信息
+                if line.startswith('Creating'):
+                    continue
+                if line.startswith('Created'):
+                    continue
+                if line.startswith('Starting'):
+                    continue
+                if line.startswith('Waiting'):
+                    continue
+                if line.startswith('summary'):
+                    continue
+                if line.startswith('Tidying'):
+                    continue
+                if line.endswith('end of run'):
+                    continue
                 print(line)
 
         if popen.returncode == 0:
-            print('Script execution success.\n')
+            # execution success
+            ...
         else:
-            print('Script execution failed.\n')
+            print('命令执行失败\n')
 
 
-def run(env: str, dirpath: str) -> None:
+def run(env: str, dirpath: str, project: str) -> None:
+    """批量运行JMeter
+
+    Args:
+        env (str): 环境名称
+        dirpath (str): 脚本目录路径
+        project (str): 项目名称，用于分类不同项目的测试报告存放路径
+
+    """
     if not dirpath:
         raise ValueError('目录路径不能为空')
 
@@ -95,16 +119,18 @@ def run(env: str, dirpath: str) -> None:
     # 设置当前工作路径为jmeter\bin
     os.chdir(__JMETER_BIN__)
     reportname = create_reportname()
+    if project:
+        reportname = os.path.join(project, reportname)
     jmeter = JMeter(env, reportname)
 
     job_starttime = current_strftime()
-    print(f'StartTime:[ {job_starttime} ]')
-    print(f'JMeterHome:[ {__JMETER_HOME__} ]')
-    print(f'脚本读取路径:[ {dirpath} ]')
-    print(f'脚本总数:[ {script_total} ]\n')
+    print(f'开始时间:[ {job_starttime} ]')
+    print(f'JMeter目录:[ {__JMETER_HOME__} ]')
+    print(f'脚本目录:[ {dirpath} ]')
+    print(f'脚本总数:[ {script_total} ]')
     print('脚本列表:')
     for index, script in enumerate(jmx_list):
-        print(f'{index + 1}. {script}')
+        print(f'    {index + 1}. {script}')
     print('\n')
 
     # 用于统计完成脚本数
@@ -118,7 +144,6 @@ def run(env: str, dirpath: str) -> None:
         current_elapsed_time = current_timestamp() - current_starttime
         completed_total += 1
         print(f'脚本耗时:[ {seconds_to_hms(current_elapsed_time)} ]\n')
-
         print(f'完成总数:[ {completed_total} ]')
         print(f'剩余总数:[ {script_total - completed_total} ]')
         print(f'执行总进度:[ {decimal_to_percentage(completed_total / script_total)} ]')
@@ -185,33 +210,36 @@ def decimal_to_percentage(decimal: float) -> str:
 def get_args(argv):
     environment = None
     directory = None
+    project = None
 
     try:
-        opts, args = getopt.getopt(argv, 'he:d:', ['help', 'environment=', 'directory='])
+        opts, args = getopt.getopt(argv, 'he:d:p:', ['help', 'environment=', 'directory=', 'project='])
     except getopt.GetoptError:
         print('使用说明')
-        print('runner.py -e <environment> -d <directory>')
-        print('runner.py --environment=<environment> --directory=<directory>')
+        print('runner.py -e <environment> -d <directory> -p <project>')
+        print('runner.py --environment=<environment> --directory=<directory> --project=<project>')
         sys.exit()
 
     for opt, arg in opts:
         if opt in ('-h', '--help'):
             print('使用说明')
-            print('runner.py -e <environment> -d <directory>')
-            print('runner.py --environment=<environment> --directory=<directory>')
+            print('runner.py -e <environment> -d <directory> -p <project>')
+            print('runner.py --environment=<environment> --directory=<directory> --project=<project>')
             sys.exit()
         elif opt in ('-e', '--environment'):
             environment = arg
         elif opt in ('-d', '--directory'):
             directory = arg
+        elif opt in ('-p', '--project'):
+            project = arg
 
-    return environment, directory
+    return environment, directory, project
 
 
 if __name__ == '__main__':
     try:
         configfile_list = get_configfile_list()
-        environment, directory = get_args(sys.argv[1:])
+        environment, directory, project = get_args(sys.argv[1:])
 
         if not environment:
             print('environment配置名称不允许为空，请重试')
@@ -233,6 +261,6 @@ if __name__ == '__main__':
         else:
             dirpath = __DEFAULT_SCRIPT_DIRECTORY__
 
-        run(environment, dirpath)
+        run(environment, dirpath, project)
     except Exception:
         traceback.print_exc()
